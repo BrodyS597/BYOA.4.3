@@ -38,13 +38,11 @@ class NetworkController {
                             //call 2nd network request, within, init the pokemon object and then put it temp array and completion(array)
                             var tempPokemonArray: [Pokemon] = []
                             for pokemonURLDictionary in resultsArray {
-                                guard let pokemonURLString = pokemonURLDictionary["url"] as? String else { return }
-                                fetchPokemonDetails(urlString: pokemonURLString) { pokemon in
-                                    guard let pokemon = pokemon else { return }
+                                if let pokemon = Pokemon(dictionary: pokemonURLDictionary) {
                                     tempPokemonArray.append(pokemon)
                                 }
-                                completion(tempPokemonArray)
                             }
+                            completion(tempPokemonArray)
                         }
                     }
                 } catch {
@@ -55,16 +53,38 @@ class NetworkController {
         }.resume()
     }
     
-    
     //second network call (needed as API leads to dif URL for the ID and height). parse in for id and height
     
-    static func fetchPokemonDetails(urlString: String, completion: @escaping (Pokemon?) -> Void) {
+    static func fetchPokemonDetails(urlString: String, completion: @escaping (PokemonDetail?) -> Void) {
         
         //contructing the url
-        guard let baseURL = URL(string: baseURLString) else { return }
-        let finalURL = baseURL.appendingPathComponent(pokemon.urlString)
+        guard let pokemonDetailURL = URL(string: urlString) else { return }
+        print(pokemonDetailURL)
         
+        //data task
+        URLSession.shared.dataTask(with: pokemonDetailURL) { data, _, error in
+            //check if there was an error
+            if let error = error {
+                print("Error \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+            //check if there is data
+            guard let data = data else {
+                completion(nil)
+                return
+            }
+            //decode the data
+            do {
+                //try
+                if let dictionary = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    let pokemonDetail = PokemonDetail(detailDictionary: dictionary)
+                    completion(pokemonDetail)
+                }
+            } catch {
+                print("Encountered error: \(error.localizedDescription)")
+                completion(nil)
+            }
+        }.resume()
     }
-    
-    
 }// end of class
